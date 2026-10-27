@@ -1,0 +1,25 @@
+[project]
+name = "intern-day-2-backend"
+version = "0.1.0"
+description = "实习生第二天练习：FastAPI 登录鉴权 + 服务器指标采集 API"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "sqlmodel>=0.0.22",
+    "pydantic>=2.7.0",
+    "bcrypt>=4.0.1",
+    "psutil>=6.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.6.0",
+    "pytest>=8.0.0",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
