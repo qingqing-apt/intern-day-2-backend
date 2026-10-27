@@ -101,7 +101,7 @@ docker compose logs --tail=100
 
 ## 自测记录
 
-联调环境：2026-10-27，后端 `feat/login-and-custom-feature`（`1806934`）× 前端同分支（`7b4f039`），容器部署在 10.0.11.100。
+联调环境：2026-10-27，后端 `feat/login-and-custom-feature`（`1806934`）× 前端同分支（`7b4f039`），容器部署在 192.0.2.10。
 
 | 场景 | 命令/操作 | 结果 |
 |---|---|---|
@@ -140,7 +140,7 @@ curl -s -X POST localhost:8000/metrics/collect -H "Authorization: Bearer $TOKEN"
 
 ## 容器与部署验证
 
-在 Linux 服务器（10.0.11.100）上完成，两条路径都实测过。
+在 Linux 服务器（192.0.2.10，本文档使用的示例地址）上完成，两条路径都实测过。
 
 **一、运行时容器（docker compose）**
 
