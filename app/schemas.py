@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field as PydanticField
+from pydantic import BaseModel, ConfigDict, Field as PydanticField
 
 
 class LoginIn(BaseModel):
@@ -14,11 +14,15 @@ class TokenOut(BaseModel):
 
 
 class UserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)  # 允许直接转换 ORM 对象
+
     id: int
     username: str
 
 
 class MetricSampleOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     ts: datetime
     cpu_percent: float
