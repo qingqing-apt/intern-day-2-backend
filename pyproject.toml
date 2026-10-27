@@ -16,6 +16,7 @@ dependencies = [
 dev = [
     "ruff>=0.6.0",
     "pytest>=8.0.0",
+    "httpx>=0.27.0",
 ]
 
 [tool.ruff]
@@ -25,5 +26,10 @@ line-length = 100
 # FastAPI 的 Depends(...) 写在参数默认值是官方惯用法，B008 属误报
 ignore = ["B008"]
 
+[tool.ruff.lint.per-file-ignores]
+# 测试需要先设置环境变量再导入应用，允许模块级导入顺序例外
+"tests/*" = ["E402"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
