@@ -86,7 +86,7 @@ docker compose logs --tail=100
 
 随机不透明令牌（`secrets.token_urlsafe(32)`）+ 服务端会话表：
 
-- 登录成功签发令牌，有效期 `SESSION_TTL_MINUTES`（默认 120 分钟）
+- 登录成功签发令牌，有效期 `SESSION_TTL_MINUTES`（默认 60 分钟）
 - 令牌存 `SessionToken` 表，含过期时间；退出登录即删除记录
 - 未携带、伪造、过期、已退出的令牌访问受保护接口一律返回 `401`
 - 前端将令牌保存在浏览器本地，请求自动携带 `Authorization: Bearer` 头；401 时前端清理本地状态并提示重新登录

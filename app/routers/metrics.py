@@ -42,7 +42,8 @@ def summary(db: Session = Depends(get_session), _: User = Depends(get_current_us
         platform=info["platform"],
         collect_interval_seconds=settings.collect_interval_seconds,
         total_samples=total,
-        latest=latest_row,
+        # Pydantic v2 不会自动把 ORM 对象转成嵌套模型，这里显式转换
+        latest=MetricSampleOut.model_validate(latest_row) if latest_row else None,
     )
 
 

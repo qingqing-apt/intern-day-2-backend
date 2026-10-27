@@ -11,7 +11,7 @@ class Settings:
     def __init__(self) -> None:
         self.database_url = os.getenv("DATABASE_URL", "sqlite:///./data/app.db")
         self.allowed_origins = _split_origins(os.getenv("ALLOWED_ORIGINS", "http://localhost:5173"))
-        self.session_ttl_minutes = int(os.getenv("SESSION_TTL_MINUTES", "120"))
+        self.session_ttl_minutes = int(os.getenv("SESSION_TTL_MINUTES", "60"))
         self.seed_username = os.getenv("SEED_USERNAME", "intern")
         self.seed_password = os.getenv("SEED_PASSWORD", "intern-pass-123")
         self.collect_interval_seconds = float(os.getenv("COLLECT_INTERVAL_SECONDS", "5"))
