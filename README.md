@@ -138,6 +138,42 @@ curl -s localhost:8000/auth/me                       # 预期 401
 curl -s -X POST localhost:8000/metrics/collect -H "Authorization: Bearer $TOKEN"
 ```
 
+## 容器与部署验证
+
+在 Linux 服务器（10.0.11.100）上完成，两条路径都实测过。
+
+**一、运行时容器（docker compose）**
+
+| 项目 | 结果 |
+|---|---|
+| 启动命令 | `docker-compose up -d --build`（项目根目录） |
+| 镜像 | `intern-day-2-backend_api`（314MB） |
+| 容器 | `intern-day-2-backend_api_1`，端口 0.0.0.0:8000→8000 |
+| 健康检查 | `GET /health` → `{"status":"ok"}` |
+| 登录接口 | `POST /auth/login` → 200 + `expires_in: 3600` |
+| 数据持久化 | SQLite 落在容器的 `/data/app.db`，`restart` 保留；删除容器重建则重置 |
+
+**二、开发容器（VS Code Dev Containers）**
+
+| 项目 | 结果 |
+|---|---|
+| 进入方式 | VS Code `Remote-SSH` 连接服务器 → 打开仓库 → `Reopen in Container` |
+| 开发镜像 | 由 `.devcontainer/Dockerfile` 构建（391MB），不依赖第一天镜像 |
+| 容器内 git | 2.47.3 |
+| 容器内 uv / python | 0.13.6 / 3.12.16 |
+| 容器内工作目录 | `/workspaces/intern-day-2-backend`（挂载自服务器仓库目录） |
+| 容器内依赖同步 | `uv sync --frozen` 成功 |
+| 容器内测试 | `pytest -q` → 3 passed |
+| 容器内静态检查 | `ruff check .` → All checks passed |
+
+**三、CI（GitHub Actions）**
+
+| 步骤 | 结果 |
+|---|---|
+| `uv sync --frozen`（按 uv.lock） | 通过 |
+| `uv run ruff check .` | All checks passed（B008 已按 FastAPI 惯例忽略，测试目录允许 E402） |
+| `uv run pytest -q` | 3 passed |
+
 ## 已知问题与限制
 
 - 采集的是**容器所在运行时环境**的指标（Docker Desktop 场景即 Linux 虚拟机），不是 Windows 宿主机本身
