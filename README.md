@@ -66,7 +66,7 @@ docker compose logs --tail=100
 - 联调方式：**浏览器直连宿主机端口**（前端 5173 / 后端 8000），两个 Compose 项目互相独立，不共享服务发现
 - 前端通过环境变量 `VITE_API_BASE_URL=http://localhost:8000` 指向本服务
 - CORS 已放行 `http://localhost:5173`（`ALLOWED_ORIGINS` 可改）
-- 实际联调使用的双方分支/提交版本：`feat/login-and-custom-feature`（联调时填写具体 commit）
+- 实际联调使用的双方分支/提交版本：后端 `feat/login-and-custom-feature`（`1806934`）× 前端同分支（`7b4f039`）
 
 ## 访问地址
 
@@ -101,7 +101,31 @@ docker compose logs --tail=100
 
 ## 自测记录
 
-（联调完成后填写，建议按任务书自测清单逐条记录：正常登录 / 错误密码 / 未登录访问 / 伪造与过期凭证 / 退出后旧凭证 / 网络异常 / 重启验证）
+联调环境：2026-10-27，后端 `feat/login-and-custom-feature`（`1806934`）× 前端同分支（`7b4f039`），容器部署在 10.0.11.100。
+
+| 场景 | 命令/操作 | 结果 |
+|---|---|---|
+| 正常登录 | `POST /auth/login` 正确凭证 | 200，返回 `token` 与 `expires_in: 3600` |
+| 错误密码 | `POST /auth/login` 错误密码 | 401，`{"detail":"账号或密码错误"}` |
+| 空字段 | 提交空 username/password | 422，字段校验拦截 |
+| 未携带凭证 | `GET /metrics/latest` 无 Authorization | 401 |
+| 伪造凭证 | 携带 `Authorization: Bearer fake` | 401 |
+| 凭证过期 | `SESSION_TTL_MINUTES=1` 启动，登录后等待 65 秒 | 过期前 200，过期后 401 |
+| 退出登录 | `POST /auth/logout` 后用旧令牌访问 | 204 登出成功；旧令牌访问返回 401 |
+| 容器 restart | `docker restart` | 账号与指标数据保留（容器文件系统未变） |
+| 容器重建 | `docker rm` + `docker run` | 新库：账号由种子数据重建，指标从 1 条重新累积，旧令牌 401 |
+| 采集器工作 | `GET /metrics/summary` | 返回真实采样（CPU/内存/磁盘/网络/运行时长/负载） |
+
+```bash
+# 快速验证示例
+TOKEN=$(curl -s -X POST localhost:8000/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"intern","password":"intern-pass-123"}' | python -c "import sys,json;print(json.load(sys.stdin)['token'])")
+
+curl -s localhost:8000/auth/me -H "Authorization: Bearer $TOKEN"
+curl -s localhost:8000/auth/me                       # 预期 401
+curl -s -X POST localhost:8000/metrics/collect -H "Authorization: Bearer $TOKEN"
+```
 
 ```bash
 # 快速验证示例
