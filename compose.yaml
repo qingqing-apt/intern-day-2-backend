@@ -1,0 +1,14 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:5173}
+      - SESSION_TTL_MINUTES=${SESSION_TTL_MINUTES:-120}
+      - COLLECT_INTERVAL_SECONDS=${COLLECT_INTERVAL_SECONDS:-5}
+      - METRICS_RETENTION=${METRICS_RETENTION:-720}
+      - SEED_USERNAME=${SEED_USERNAME:-intern}
+      - SEED_PASSWORD=${SEED_PASSWORD:-intern-pass-123}
+    volumes:
+      - ./data:/data
