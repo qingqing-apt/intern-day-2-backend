@@ -28,13 +28,13 @@
 
 ## 开发环境进入方式
 
-本仓库开发容器基于第一天的 `git-base:1.1` 镜像构建（已内置 git 2.34.1 与团队 GitHub 只读密钥），在上层追加 uv 与 Python 3.12。
+本仓库开发容器基于官方 `python:3.12-slim` 构建（见 `.devcontainer/Dockerfile`），容器内安装 git、openssh-client 与 uv，**不依赖第一天的基础镜像**，任何机器可直接构建。
 
 前置条件：
 
-1. 本机已导入基础镜像：`docker load -i git-base-1.1.tar.gz`
+1. 本机已安装并启动 Docker
 2. VS Code 已安装 Dev Containers 扩展
-3. 在容器内配置自己的 git 身份与推送密钥（基础镜像内置的密钥只读，不能 push）：
+3. 在容器内配置自己的 git 身份与推送密钥：
 
 ```bash
 git config --global user.name  "你的名字"

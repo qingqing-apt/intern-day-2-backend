@@ -1,10 +1,11 @@
-FROM git-base:1.1
+FROM python:3.12-slim
 
-# 在第一天的基础镜像上追加 uv，并由 uv 管理 Python 3.12
+# 开发容器所需的基础工具：git 用于版本操作，ssh 用于访问私有仓库
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl ca-certificates \
-    && curl -LsSf https://astral.sh/uv/install.sh | sh \
-    && uv python install 3.12 \
+    && apt-get install -y --no-install-recommends git openssh-client ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 
-ENV PATH="/root/.local/bin:${PATH}"
+# 与运行时镜像同源引入 uv，保证开发与运行使用同一套依赖解析
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+WORKDIR /workspace
