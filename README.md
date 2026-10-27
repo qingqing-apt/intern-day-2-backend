@@ -174,6 +174,19 @@ curl -s -X POST localhost:8000/metrics/collect -H "Authorization: Bearer $TOKEN"
 | `uv run ruff check .` | All checks passed（B008 已按 FastAPI 惯例忽略，测试目录允许 E402） |
 | `uv run pytest -q` | 3 passed |
 
+**四、复现验证（在另一个目录克隆后按本文档启动）**
+
+| 步骤 | 结果 |
+|---|---|
+| 克隆后文件完整性 | `uv.lock`、`.devcontainer`、`.github` 均来自版本库 |
+| `docker-compose config` | 校验通过 |
+| `docker-compose up --build -d` | 构建并启动成功，容器 `intern-day-2-backend_api_1`，0.0.0.0:8000 |
+| `GET /health` | `{"status":"ok"}` |
+| `POST /auth/login` | 200，返回 token 与 `expires_in: 3600` |
+| 无凭证访问 `/metrics/latest` | 401 |
+
+> 注意：`uv.lock` 未入库时容器构建会直接失败（`COPY failed: uv.lock`），锁文件必须提交。
+
 ## 已知问题与限制
 
 - 采集的是**容器所在运行时环境**的指标（Docker Desktop 场景即 Linux 虚拟机），不是 Windows 宿主机本身
