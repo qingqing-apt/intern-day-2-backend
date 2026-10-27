@@ -28,13 +28,13 @@
 
 ## 开发环境进入方式
 
-本仓库开发容器基于第一天的 `git-base:1.1` 镜像构建（已内置 git 2.34.1 与团队 GitHub 只读密钥），在上层追加 uv 与 Python 3.12。
+本仓库开发容器基于官方 `python:3.12-slim` 构建（见 `.devcontainer/Dockerfile`），容器内安装 git、openssh-client 与 uv，**不依赖第一天的基础镜像**，任何机器可直接构建。
 
 前置条件：
 
-1. 本机已导入基础镜像：`docker load -i git-base-1.1.tar.gz`
+1. 本机已安装并启动 Docker
 2. VS Code 已安装 Dev Containers 扩展
-3. 在容器内配置自己的 git 身份与推送密钥（基础镜像内置的密钥只读，不能 push）：
+3. 在容器内配置自己的 git 身份与推送密钥：
 
 ```bash
 git config --global user.name  "你的名字"
@@ -66,7 +66,7 @@ docker compose logs --tail=100
 - 联调方式：**浏览器直连宿主机端口**（前端 5173 / 后端 8000），两个 Compose 项目互相独立，不共享服务发现
 - 前端通过环境变量 `VITE_API_BASE_URL=http://localhost:8000` 指向本服务
 - CORS 已放行 `http://localhost:5173`（`ALLOWED_ORIGINS` 可改）
-- 实际联调使用的双方分支/提交版本：`feat/login-and-custom-feature`（联调时填写具体 commit）
+- 实际联调使用的双方分支/提交版本：后端 `feat/login-and-custom-feature`（`1806934`）× 前端同分支（`7b4f039`）
 
 ## 访问地址
 
@@ -101,7 +101,20 @@ docker compose logs --tail=100
 
 ## 自测记录
 
-（联调完成后填写，建议按任务书自测清单逐条记录：正常登录 / 错误密码 / 未登录访问 / 伪造与过期凭证 / 退出后旧凭证 / 网络异常 / 重启验证）
+联调环境：2026-10-27，后端 `feat/login-and-custom-feature`（`1806934`）× 前端同分支（`7b4f039`），容器部署在 192.0.2.10。
+
+| 场景 | 命令/操作 | 结果 |
+|---|---|---|
+| 正常登录 | `POST /auth/login` 正确凭证 | 200，返回 `token` 与 `expires_in: 3600` |
+| 错误密码 | `POST /auth/login` 错误密码 | 401，`{"detail":"账号或密码错误"}` |
+| 空字段 | 提交空 username/password | 422，字段校验拦截 |
+| 未携带凭证 | `GET /metrics/latest` 无 Authorization | 401 |
+| 伪造凭证 | 携带 `Authorization: Bearer fake` | 401 |
+| 凭证过期 | `SESSION_TTL_MINUTES=1` 启动，登录后等待 65 秒 | 过期前 200，过期后 401 |
+| 退出登录 | `POST /auth/logout` 后用旧令牌访问 | 204 登出成功；旧令牌访问返回 401 |
+| 容器 restart | `docker restart` | 账号与指标数据保留（容器文件系统未变） |
+| 容器重建 | `docker rm` + `docker run` | 新库：账号由种子数据重建，指标从 1 条重新累积，旧令牌 401 |
+| 采集器工作 | `GET /metrics/summary` | 返回真实采样（CPU/内存/磁盘/网络/运行时长/负载） |
 
 ```bash
 # 快速验证示例
@@ -113,6 +126,66 @@ curl -s localhost:8000/auth/me -H "Authorization: Bearer $TOKEN"
 curl -s localhost:8000/auth/me                       # 预期 401
 curl -s -X POST localhost:8000/metrics/collect -H "Authorization: Bearer $TOKEN"
 ```
+
+```bash
+# 快速验证示例
+TOKEN=$(curl -s -X POST localhost:8000/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"intern","password":"intern-pass-123"}' | python -c "import sys,json;print(json.load(sys.stdin)['token'])")
+
+curl -s localhost:8000/auth/me -H "Authorization: Bearer $TOKEN"
+curl -s localhost:8000/auth/me                       # 预期 401
+curl -s -X POST localhost:8000/metrics/collect -H "Authorization: Bearer $TOKEN"
+```
+
+## 容器与部署验证
+
+在 Linux 服务器（192.0.2.10，本文档使用的示例地址）上完成，两条路径都实测过。
+
+**一、运行时容器（docker compose）**
+
+| 项目 | 结果 |
+|---|---|
+| 启动命令 | `docker-compose up -d --build`（项目根目录） |
+| 镜像 | `intern-day-2-backend_api`（314MB） |
+| 容器 | `intern-day-2-backend_api_1`，端口 0.0.0.0:8000→8000 |
+| 健康检查 | `GET /health` → `{"status":"ok"}` |
+| 登录接口 | `POST /auth/login` → 200 + `expires_in: 3600` |
+| 数据持久化 | SQLite 落在容器的 `/data/app.db`，`restart` 保留；删除容器重建则重置 |
+
+**二、开发容器（VS Code Dev Containers）**
+
+| 项目 | 结果 |
+|---|---|
+| 进入方式 | VS Code `Remote-SSH` 连接服务器 → 打开仓库 → `Reopen in Container` |
+| 开发镜像 | 由 `.devcontainer/Dockerfile` 构建（391MB），不依赖第一天镜像 |
+| 容器内 git | 2.47.3 |
+| 容器内 uv / python | 0.13.6 / 3.12.16 |
+| 容器内工作目录 | `/workspaces/intern-day-2-backend`（挂载自服务器仓库目录） |
+| 容器内依赖同步 | `uv sync --frozen` 成功 |
+| 容器内测试 | `pytest -q` → 3 passed |
+| 容器内静态检查 | `ruff check .` → All checks passed |
+
+**三、CI（GitHub Actions）**
+
+| 步骤 | 结果 |
+|---|---|
+| `uv sync --frozen`（按 uv.lock） | 通过 |
+| `uv run ruff check .` | All checks passed（B008 已按 FastAPI 惯例忽略，测试目录允许 E402） |
+| `uv run pytest -q` | 3 passed |
+
+**四、复现验证（在另一个目录克隆后按本文档启动）**
+
+| 步骤 | 结果 |
+|---|---|
+| 克隆后文件完整性 | `uv.lock`、`.devcontainer`、`.github` 均来自版本库 |
+| `docker-compose config` | 校验通过 |
+| `docker-compose up --build -d` | 构建并启动成功，容器 `intern-day-2-backend_api_1`，0.0.0.0:8000 |
+| `GET /health` | `{"status":"ok"}` |
+| `POST /auth/login` | 200，返回 token 与 `expires_in: 3600` |
+| 无凭证访问 `/metrics/latest` | 401 |
+
+> 注意：`uv.lock` 未入库时容器构建会直接失败（`COPY failed: uv.lock`），锁文件必须提交。
 
 ## 已知问题与限制
 

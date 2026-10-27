@@ -2,31 +2,38 @@ import os
 import tempfile
 from pathlib import Path
 
+import pytest
+
 # 必须在导入 app 之前设置，保证测试使用独立临时数据库
 os.environ["DATABASE_URL"] = f"sqlite:///{Path(tempfile.mkdtemp()).as_posix()}/test.db"
 os.environ["COLLECT_INTERVAL_SECONDS"] = "9999"
 os.environ["SEED_USERNAME"] = "tester"
 os.environ["SEED_PASSWORD"] = "test-pass-123"
 
-from fastapi.testclient import TestClient  # noqa: E402
+from fastapi.testclient import TestClient
 
-from app.main import app  # noqa: E402
-
-client = TestClient(app)
+from app.main import app
 
 
-def _login() -> str:
+@pytest.fixture(scope="module")
+def client():
+    """进入上下文以触发应用生命周期：建表、写入种子账号、启动采集器。"""
+    with TestClient(app) as c:
+        yield c
+
+
+def _login(client: TestClient) -> str:
     resp = client.post("/auth/login", json={"username": "tester", "password": "test-pass-123"})
     assert resp.status_code == 200
     return resp.json()["token"]
 
 
-def test_health():
+def test_health(client):
     assert client.get("/health").status_code == 200
 
 
-def test_login_me_logout_flow():
-    token = _login()
+def test_login_me_logout_flow(client):
+    token = _login(client)
 
     me = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert me.status_code == 200
@@ -46,12 +53,12 @@ def test_login_me_logout_flow():
     assert client.get("/auth/me", headers={"Authorization": f"Bearer {token}"}).status_code == 401
 
 
-def test_metrics_requires_login():
+def test_metrics_requires_login(client):
     assert client.get("/metrics/latest").status_code == 401
     assert client.get("/metrics/history").status_code == 401
     assert client.get("/metrics/summary").status_code == 401
 
-    token = _login()
+    token = _login(client)
     headers = {"Authorization": f"Bearer {token}"}
 
     collected = client.post("/metrics/collect", headers=headers)

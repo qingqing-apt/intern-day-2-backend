@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field as PydanticField
+from pydantic import BaseModel, ConfigDict
+from pydantic import Field as PydanticField
 
 
 class LoginIn(BaseModel):

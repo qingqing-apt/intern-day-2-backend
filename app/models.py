@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime as SADateTime
+from sqlalchemy import Column
+from sqlalchemy import DateTime as SADateTime
 from sqlmodel import Field, SQLModel
 
 
