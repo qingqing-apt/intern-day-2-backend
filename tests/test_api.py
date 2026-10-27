@@ -8,9 +8,9 @@ os.environ["COLLECT_INTERVAL_SECONDS"] = "9999"
 os.environ["SEED_USERNAME"] = "tester"
 os.environ["SEED_PASSWORD"] = "test-pass-123"
 
-from fastapi.testclient import TestClient  # noqa: E402
+from fastapi.testclient import TestClient
 
-from app.main import app  # noqa: E402
+from app.main import app
 
 client = TestClient(app)
 

@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import platform
 import socket
 
@@ -10,13 +11,15 @@ from .db import engine
 from .models import MetricSample
 from .timeutil import utcnow
 
+logger = logging.getLogger(__name__)
+
 
 def _prime_cpu() -> None:
     """cpu_percent(interval=None) 需要一次前置调用才能给出差值。"""
     try:
         psutil.cpu_percent(interval=None)
     except Exception:
-        pass
+        logger.debug("CPU 预热失败", exc_info=True)
 
 
 def collect_sample(db: Session) -> MetricSample:
@@ -60,7 +63,7 @@ async def collector_loop() -> None:
                 collect_sample(db)
                 trim_samples(db)
         except Exception:
-            pass  # 单次采集失败不影响服务继续运行
+            logger.warning("采集样本失败，将在下一个周期重试", exc_info=True)
         await asyncio.sleep(settings.collect_interval_seconds)
 
 
